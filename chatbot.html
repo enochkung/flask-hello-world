@@ -1,0 +1,65 @@
+{% extends 'base_template.html' %}
+
+{% block body %}
+    <div class="chat-container">
+        <div class="chat-header">Chatbot</div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Messages will appear here -->
+        </div>
+        <div class="chat-input">
+            <input id="userInput" type="text" placeholder="Type your message here...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        function sendMessage() {
+            const userInput = document.getElementById("userInput").value;
+            const chatMessages = document.getElementById("chatMessages");
+
+            if (userInput.trim() === "") {
+                alert("Please enter a message.");
+                return;
+            }
+
+            // Display the user's message
+            const userMessage = document.createElement("div");
+            userMessage.textContent = "You: " + userInput;
+            userMessage.style.marginBottom = "10px";
+            chatMessages.appendChild(userMessage);
+
+            // Clear the input box
+            document.getElementById("userInput").value = "";
+
+            // Send the input to the server
+            fetch("/ask", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ text: userInput }),
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    // Display the chatbot's response
+                    const botMessage = document.createElement("div");
+                    botMessage.textContent = "Bot: " + data.response;
+                    botMessage.style.marginBottom = "10px";
+                    botMessage.style.color = "blue";
+                    chatMessages.appendChild(botMessage);
+
+                    // Auto-scroll to the bottom of the chat
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    alert("An error occurred. Please try again.");
+                });
+        }
+    </script>
+{% endblock %}

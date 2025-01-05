@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Prices - Last 3 Weeks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        .stock-data {
+            font-size: 20px;
+            margin: 20px 0;
+        }
+        #chart-container {
+            width: 90%;
+            margin: 0 auto;
+        }
+    </style>
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Stock Prices Over the Last 3 Weeks</h1>
+    <div id="stock-data" class="stock-data">
+        <p>Loading...</p>
+    </div>
+    <div id="chart-container">
+        <canvas id="stockChart"></canvas>
+    </div>
+
+    <script>
+        // Initialize the Chart.js graph
+        const ctx = document.getElementById('stockChart').getContext('2d');
+        const stockChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // Dates (x-axis) - initialized empty
+                datasets: [{
+                    label: 'Stock Price (USD)',
+                    data: [], // Prices (y-axis) - initialized empty
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date',
+                            color: '#666'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Price (USD)',
+                            color: '#666'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Fetch the stock data from the backend
+        async function fetchStockData() {
+            try {
+                const response = await fetch('/data'); // Fetch data from Flask API
+                const data = await response.json();
+
+                const stockContainer = document.getElementById('stock-data');
+                if (data.error) {
+                    stockContainer.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                } else {
+                    stockContainer.innerHTML = `
+                        <p><strong>Stock Ticker:</strong> ${data.ticker}</p>
+                        <p>Displaying stock prices for the past 3 weeks.</p>
+                    `;
+
+                    // Update the graph with the fetched data
+                    updateGraph(data.dates, data.prices);
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        // Function to update the graph with new data
+        function updateGraph(dates, prices) {
+            stockChart.data.labels = dates; // Update the x-axis labels
+            stockChart.data.datasets[0].data = prices; // Update the y-axis data
+            stockChart.update(); // Re-render the chart
+        }
+
+        // Fetch data on page load
+        window.onload = fetchStockData;
+    </script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+{% extends 'base_template.html' %}
+
+{% block body %}
+  <div class="main-container">
+    <div class="left-panel">
+      <h3>Add a Ticker</h3>
+      <input id="tickerInput" class="w3-input w3-border" type="text" placeholder="Enter stock ticker (e.g., AAPL)">
+      <button class="w3-button w3-green w3-margin-top" onclick="addTicker()">Add Ticker</button>
+      <button class="w3-button w3-red w3-margin-top" onclick="clearTicker()">Clear Ticker</button>
+
+      <h3>Tickers List</h3>
+      <div id="tickerList"></div>
+    </div>
+    <div class="right-panel">
+      <h3>Stock Price History</h3>
+      <div id="stockHistory"></div>
+    </div>
+  </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+  const TICKER_STORAGE_KEY = "savedTickers";
+  let tickerList = [];
+  const charts = {};
+
+  // Load tickers from localStorage when the page loads
+  document.addEventListener("DOMContentLoaded", () => {
+    const savedTickers = localStorage.getItem(TICKER_STORAGE_KEY);
+    if (savedTickers) {
+      console.log("DOM fully loaded and parsed");
+      tickerList = JSON.parse(savedTickers);
+      updateTickerList();
+      }
+    });
+
+  // Function to add a ticker
+  function addTicker() {
+    console.log("add ticker");
+    const tickerInput = document.getElementById("tickerInput");
+    const ticker = tickerInput.value.trim().toUpperCase();
+
+    if (ticker && !tickerList.includes(ticker)) {
+      tickerList.push(ticker);
+      localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(tickerList));
+      updateTickerList();
+    } else if (ticker && tickerList.includes(ticker)) {
+      alert("Ticker already exists in the list.");
+    }
+
+    tickerInput.value = "";
+  }
+
+  // Function to update the ticker list
+  function updateTickerList() {
+    const tickerListDiv = document.getElementById("tickerList");
+    tickerListDiv.innerHTML = ""; // Clear the list
+
+    tickerList.forEach((ticker, index) => {
+      const tickerDiv = document.createElement("div");
+      tickerDiv.classList.add("ticker-item");
+
+      const tickerText = document.createElement("span");
+      tickerText.innerText = ticker;
+      tickerText.onclick = () => loadGraphForTicker(ticker); // Load graph on click
+
+      const deleteButton = document.createElement("button");
+      deleteButton.innerText = "Delete";
+      deleteButton.onclick = () => {
+        tickerList.splice(index, 1);
+        delete charts[ticker]; // Remove the chart
+        localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(tickerList));
+        updateTickerList();
+        clearGraph();
+      };
+
+      tickerDiv.appendChild(tickerText);
+      tickerDiv.appendChild(deleteButton);
+
+      tickerListDiv.appendChild(tickerDiv);
+    });
+  }
+
+  // Function to load the graph for a specific ticker
+  async function loadGraphForTicker(ticker) {
+    try {
+      const response = await fetch(`/data?ticker=${ticker}`);
+      const data = await response.json();
+
+      if (data.error) {
+        alert(`Error fetching data for ${ticker}: ${data.error}`);
+      } else {
+        displayGraph(ticker, data.dates, data.prices);
+      }
+    } catch (error) {
+      console.error(`Error fetching data for ${ticker}:`, error);
+    }
+  }
+
+  // Function to display the graph
+  function displayGraph(ticker, dates, prices) {
+    const stockHistoryDiv = document.getElementById("stockHistory");
+    stockHistoryDiv.innerHTML = ""; // Clear the history
+
+    const chartContainer = document.createElement("div");
+    chartContainer.classList.add("chart-container");
+
+    const canvas = document.createElement("canvas");
+    canvas.id = `chart-${ticker}`;
+    chartContainer.appendChild(canvas);
+
+    stockHistoryDiv.appendChild(chartContainer);
+
+    const ctx = canvas.getContext("2d");
+
+    if (charts[ticker]) {
+      charts[ticker].destroy(); // Destroy the old chart
+    }
+
+    charts[ticker] = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: dates,
+        datasets: [{
+          label: `${ticker} Stock Price (USD)`,
+          data: prices,
+          borderColor: "rgba(75, 192, 192, 1)",
+          backgroundColor: "rgba(75, 192, 192, 0.2)",
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top"
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Date"
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: "Price (USD)"
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Function to clear the graph
+  function clearGraph() {
+    const stockHistoryDiv = document.getElementById("stockHistory");
+    stockHistoryDiv.innerHTML = ""; // Clear the graph section
+  }
+
+  // clear List
+  function clearTicker() {
+    console.log("abc");
+    tickerList = [];
+    console.log(tickerList);
+    updateTickerList();
+    clearGraph();
+  }
+</script>
+
+{% endblock %}
+
+
+
+<!--</body>-->
+<!--</html>-->
